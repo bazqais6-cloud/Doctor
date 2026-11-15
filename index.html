@@ -6,11 +6,13 @@
 <title>Doctor Clinic</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   body { font-family: 'Inter', system-ui, sans-serif; }
   html[dir="rtl"] body, html[dir="rtl"] { font-family: 'Noto Nastaliq Urdu', 'Inter', serif; }
-  html[dir="rtl"] .ltr-only { direction: ltr; }
   .card { background:#fff; border-radius:1rem; box-shadow:0 1px 3px rgba(0,0,0,.08); }
   .btn { display:inline-block; padding:.6rem 1.1rem; border-radius:.6rem; font-weight:600; cursor:pointer; border:none; text-align:center; }
   .btn-primary { background:#0d9488; color:#fff; }
@@ -26,13 +28,16 @@
   .fab { position:fixed; bottom:1.2rem; right:1.2rem; z-index:50; }
   html[dir="rtl"] .fab { right:auto; left:1.2rem; }
   img.photo { object-fit:cover; width:100%; height:100%; }
-  .toast { position:fixed; bottom:5rem; left:50%; transform:translateX(-50%); background:#0f172a; color:#fff; padding:.6rem 1rem; border-radius:.6rem; z-index:100; display:none; }
+  .toast { position:fixed; bottom:5rem; left:50%; transform:translateX(-50%); background:#0f172a; color:#fff; padding:.6rem 1rem; border-radius:.6rem; z-index:100; display:none; max-width:90%; }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased">
 
 <!-- ================= PATIENT PORTAL ================= -->
 <div id="portal">
+  <div id="setupBanner" class="hidden bg-red-50 border-b border-red-300 text-red-800 text-sm p-3 text-center">
+    Setup needed: paste your Firebase settings into the FIREBASE_CONFIG block in this file. Until then, changes are not shared.
+  </div>
   <header class="bg-white shadow-sm sticky top-0 z-40">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
       <div class="flex items-center gap-3 min-w-0">
@@ -44,14 +49,13 @@
       </div>
       <div class="flex items-center gap-2">
         <button id="langBtn" class="btn btn-ghost text-sm" onclick="toggleLang()">اردو</button>
-        <a id="h-wa" class="btn btn-wa text-sm hidden" target="_blank" rel="noopener">WhatsApp</a>
+        <a id="h-wa" class="btn btn-wa text-sm" target="_blank" rel="noopener">WhatsApp</a>
         <button class="btn btn-ghost text-sm" onclick="showAdminLogin()" title="Doctor login">⚙</button>
       </div>
     </div>
   </header>
 
   <main class="max-w-6xl mx-auto px-4 py-6 space-y-8">
-    <!-- Welcome -->
     <section class="card overflow-hidden md:flex">
       <div class="md:w-1/2 h-56 md:h-auto bg-teal-100">
         <img id="w-photo" class="photo hidden" alt="">
@@ -66,19 +70,16 @@
       </div>
     </section>
 
-    <!-- Announcements -->
     <section id="announcementsSec" class="hidden">
-      <h2 class="section-title text-xl font-bold mb-3" data-i18n="announcements">Announcements</h2>
+      <h2 class="text-xl font-bold mb-3" data-i18n="announcements">Announcements</h2>
       <div id="announcements" class="space-y-3"></div>
     </section>
 
-    <!-- Catalog -->
     <section>
       <h2 class="text-xl font-bold mb-3" data-i18n="services">Treatments & Services</h2>
       <div id="catalog" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
     </section>
 
-    <!-- Doctor -->
     <section class="card p-6 md:flex gap-6">
       <div class="md:w-1/3 mb-4 md:mb-0">
         <div class="w-40 h-40 rounded-full overflow-hidden bg-teal-100 mx-auto">
@@ -96,7 +97,6 @@
       </div>
     </section>
 
-    <!-- Clinic info -->
     <section class="card p-6 grid md:grid-cols-2 gap-6">
       <div>
         <h2 class="text-xl font-bold mb-2" data-i18n="clinicInfo">Clinic Information</h2>
@@ -110,7 +110,6 @@
       </div>
     </section>
 
-    <!-- Booking -->
     <section id="book" class="card p-6">
       <h2 class="text-xl font-bold mb-1" data-i18n="bookTitle">Request an Appointment</h2>
       <p class="text-sm text-slate-500 mb-4" data-i18n="bookNote">Your request is not confirmed yet. The doctor will confirm through WhatsApp.</p>
@@ -128,13 +127,11 @@
       </div>
     </section>
 
-    <!-- Files / WhatsApp help -->
     <section class="card p-6">
       <h2 class="text-xl font-bold mb-2" data-i18n="shareTitle">Sharing Reports & Prescriptions</h2>
       <p class="text-sm text-slate-600" data-i18n="shareText">Open WhatsApp using the button below, then tap the attachment (📎) icon in the chat to send photos, PDFs, or reports. The website cannot send files for you.</p>
     </section>
 
-    <!-- QR -->
     <section class="card p-6 text-center">
       <h2 class="text-xl font-bold mb-3" data-i18n="qrTitle">Scan to open this clinic page</h2>
       <div id="qrBox" class="inline-block bg-white p-3"></div>
@@ -145,29 +142,26 @@
       </div>
     </section>
 
-    <!-- Social & footer -->
     <footer class="text-center text-sm text-slate-500 pb-24">
       <div id="socials" class="flex justify-center gap-3 flex-wrap mb-3"></div>
       <div id="f-clinic"></div>
     </footer>
   </main>
 
-  <a id="fabWa" class="fab btn btn-wa rounded-full shadow-lg px-5 py-3 hidden" target="_blank" rel="noopener">💬 WhatsApp</a>
+  <a id="fabWa" class="fab btn btn-wa rounded-full shadow-lg px-5 py-3" target="_blank" rel="noopener">💬 WhatsApp</a>
 </div>
-
-<!-- ================= BOOKING ================= -->
-<!-- (booking is part of the portal) -->
 
 <!-- ================= ADMIN LOGIN ================= -->
 <div id="adminLogin" class="hidden-view min-h-screen flex items-center justify-center p-4">
   <div class="card p-6 w-full max-w-sm">
     <h2 class="text-xl font-bold mb-3" data-i18n="adminLogin">Doctor Login</h2>
-    <div class="field"><label>PIN</label><input id="pinInput" type="password" inputmode="numeric"></div>
+    <div class="field"><label>Email</label><input id="a_email" type="email" autocomplete="username"></div>
+    <div class="field"><label>Password</label><input id="a_pw" type="password" autocomplete="current-password"></div>
     <div class="flex gap-2">
       <button class="btn btn-primary flex-1" onclick="adminLogin()">Login</button>
       <button class="btn btn-ghost" onclick="showPortal()">Back</button>
     </div>
-    <p class="text-xs text-slate-500 mt-3">Default PIN is <b>1234</b>. Change it in Admin → Security as soon as you log in.</p>
+    <p class="text-xs text-slate-500 mt-3">Only the doctor's account can log in. Accounts are created in the Firebase console (see setup guide).</p>
   </div>
 </div>
 
@@ -191,18 +185,31 @@
 <div id="toast" class="toast"></div>
 
 <script>
+/* ==================== FIREBASE SETTINGS (paste yours here) ==================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDy2BrH7WikjqvfmPM8ZDePloq0hXuYom4",
+  authDomain: "doctor-h-clinic.firebaseapp.com",
+  databaseURL: "https://doctor-h-clinic-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "doctor-h-clinic",
+  storageBucket: "doctor-h-clinic.firebasestorage.app",
+  messagingSenderId: "604857583783",
+  appId: "1:604857583783:web:1b99f65592c9b957b9f382"
+};
+const CONFIGURED = !FIREBASE_CONFIG.apiKey.startsWith("PASTE_") && !!FIREBASE_CONFIG.databaseURL && !FIREBASE_CONFIG.databaseURL.startsWith("PASTE_");
+
+let db = null, auth = null;
+if (CONFIGURED) {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.database();
+  auth = firebase.auth();
+}
+
 /* ==================== DATA & DEFAULTS ==================== */
-const STORE_KEY = 'doctorClinicData_v1';
 const DEFAULT_DATA = {
-  pin: '1234',
   lang: 'en',
   clinic: {
-    name: 'Doctor Clinic',
-    logo: '',
-    address: '123 Main Street, City',
-    phone: '+92 300 0000000',
-    whatsapp: '923000000000',
-    mapLink: 'https://maps.google.com/?q=clinic',
+    name: 'Doctor Clinic', logo: '', address: '123 Main Street, City',
+    phone: '+92 300 0000000', whatsapp: '923000000000', mapLink: 'https://maps.google.com/?q=clinic',
     hours: [
       { day: 'Monday', open: '09:00', close: '17:00', closed: false },
       { day: 'Tuesday', open: '09:00', close: '17:00', closed: false },
@@ -214,30 +221,11 @@ const DEFAULT_DATA = {
     ],
     siteUrl: ''
   },
-  doctor: {
-    name: 'Dr. Full Name',
-    quals: 'MBBS, FCPS',
-    spec: 'General Physician',
-    exp: '15 years experience',
-    intro: 'Welcome. I am dedicated to providing compassionate, reliable care to every patient.',
-    photo: '',
-    gallery: []
-  },
-  welcome: {
-    title: 'Welcome to our clinic',
-    intro: 'Quality healthcare for you and your family. Book an appointment or message us on WhatsApp.',
-    photo: ''
-  },
-  treatments: [
-    { id: 't1', name: 'General Consultation', desc: 'Checkups, fever, infections, and routine care.', detail: 'Full examination, diagnosis, and prescription where needed.', fee: '1000', image: '' },
-    { id: 't2', name: 'Diabetes Care', desc: 'Sugar monitoring and long-term management.', detail: 'Blood sugar review, diet guidance, and medication planning.', fee: '1500', image: '' },
-    { id: 't3', name: 'Blood Pressure Clinic', desc: 'Hypertension screening and follow-up.', detail: 'BP checks, lifestyle advice, and medicine review.', fee: '1000', image: '' }
-  ],
-  announcements: [
-    { id: 'a1', date: '', text: 'Clinic will be closed on public holidays. Please check the timings above.' }
-  ],
-  socials: { facebook: '', instagram: '', youtube: '', tiktok: '', website: '', other: '' },
-  appointments: []
+  doctor: { name: 'Dr. Full Name', quals: 'MBBS, FCPS', spec: 'General Physician', exp: '15 years experience', intro: '', photo: '', gallery: [] },
+  welcome: { title: 'Welcome to our clinic', intro: '', photo: '' },
+  treatments: [],
+  announcements: [],
+  socials: { facebook: '', instagram: '', youtube: '', tiktok: '', website: '', other: '' }
 };
 
 const I18N = {
@@ -252,7 +240,7 @@ const I18N = {
     shareTitle: 'Sharing Reports & Prescriptions',
     shareText: 'Open WhatsApp using the button below, then tap the attachment (📎) icon in the chat to send photos, PDFs, or reports. The website cannot send files for you.',
     qrTitle: 'Scan to open this clinic page', dlQR: 'Download QR', prQR: 'Print QR', adminLogin: 'Doctor Login',
-    viewDetails: 'Details', fee: 'Fee', bookFor: 'Book for this', other: 'Other', closed: 'Closed', fromPrefix: 'Fee'
+    viewDetails: 'Details', fee: 'Fee', bookFor: 'Book for this', other: 'Other', closed: 'Closed'
   },
   ur: {
     bookBtn: 'اپائنٹمنٹ بک کریں', waBtn: 'واٹس ایپ پر رابطہ کریں', announcements: 'اعلانات',
@@ -265,37 +253,40 @@ const I18N = {
     shareTitle: 'رپورٹس اور نسخے بھیجنا',
     shareText: 'نیچے دیے گئے بٹن سے واٹس ایپ کھولیں، پھر 📎 آئیکن دبا کر تصاویر، PDF یا رپورٹس بھیجیں۔ ویب سائٹ آپ کی طرف سے فائل نہیں بھیج سکتی۔',
     qrTitle: 'اس کلینک کا صفحہ کھولنے کے لیے اسکین کریں', dlQR: 'QR ڈاؤن لوڈ کریں', prQR: 'QR پرنٹ کریں', adminLogin: 'ڈاکٹر لاگ اِن',
-    viewDetails: 'تفصیل', fee: 'فیس', bookFor: 'اس کے لیے بک کریں', other: 'دیگر', closed: 'بند', fromPrefix: 'فیس'
+    viewDetails: 'تفصیل', fee: 'فیس', bookFor: 'اس کے لیے بک کریں', other: 'دیگر', closed: 'بند'
   }
 };
 
-let data = loadData();
-let lang = data.lang || 'en';
-let adminAuthed = false;
+let data = structuredClone(DEFAULT_DATA);
+data.appointments = [];
+let lang = localStorage.getItem('lang') || 'en';
+let adminSection = 'clinic';
+let apptRef = null;
 
-function loadData() {
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return Object.assign(structuredClone(DEFAULT_DATA), JSON.parse(raw));
-  } catch (e) {}
-  return structuredClone(DEFAULT_DATA);
-}
-function saveData(msg) {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); toast(msg || 'Saved'); }
-  catch (e) { toast('Storage not available on this browser'); }
-}
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.style.display = 'block';
-  clearTimeout(window._tt); window._tt = setTimeout(() => t.style.display = 'none', 2000);
-}
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function t(k) { return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k; }
+function v(id) { return document.getElementById(id).value.trim(); }
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.display = 'block';
+  clearTimeout(window._tt); window._tt = setTimeout(() => el.style.display = 'none', 2500);
+}
 function waLink(text) {
   const num = (data.clinic.whatsapp || '').replace(/[^0-9]/g, '');
   return 'https://wa.me/' + num + '?text=' + encodeURIComponent(text);
 }
 function siteUrl() { return data.clinic.siteUrl || window.location.href.split('#')[0].split('?')[0]; }
+function isDoctor() { return !!(auth && auth.currentUser); }
+
+/* Save only public content (never appointments). Only the signed-in doctor can write. */
+function saveData(msg) {
+  if (!CONFIGURED) return toast('Firebase not set up yet. See the setup guide.');
+  const site = Object.assign({}, data);
+  delete site.appointments;
+  db.ref('site').set(site)
+    .then(() => toast(msg || 'Saved'))
+    .catch(() => toast('Not saved. Please log in as the doctor.'));
+}
 
 /* ==================== LANGUAGE ==================== */
 function applyLang() {
@@ -306,7 +297,8 @@ function applyLang() {
 }
 function toggleLang() {
   lang = lang === 'en' ? 'ur' : 'en';
-  data.lang = lang; saveData(); applyLang(); renderPortal();
+  localStorage.setItem('lang', lang);
+  applyLang(); renderPortal();
 }
 
 /* ==================== PORTAL RENDER ==================== */
@@ -318,23 +310,19 @@ function renderPortal() {
   if (c.logo) { logo.src = c.logo; logo.classList.remove('hidden'); } else logo.classList.add('hidden');
 
   const wa = waLink('Hello, I would like to contact ' + c.name + '.');
-  ['h-wa','w-wa','fabWa'].forEach(id => { const el = document.getElementById(id); el.href = wa; });
-  document.getElementById('h-wa').classList.remove('hidden');
-  document.getElementById('fabWa').classList.remove('hidden');
+  ['h-wa', 'w-wa', 'fabWa'].forEach(id => document.getElementById(id).href = wa);
 
   document.getElementById('w-welcome').textContent = w.title;
   document.getElementById('w-intro').textContent = w.intro;
   const wp = document.getElementById('w-photo');
   if (w.photo) { wp.src = w.photo; wp.classList.remove('hidden'); } else wp.classList.add('hidden');
 
-  // announcements
-  const ann = data.announcements.filter(a => a.text);
+  const ann = (data.announcements || []).filter(a => a.text);
   document.getElementById('announcementsSec').classList.toggle('hidden', ann.length === 0);
   document.getElementById('announcements').innerHTML = ann.map(a =>
     `<div class="card p-4 border-l-4 border-amber-400">${a.date ? `<div class="text-xs text-slate-500">${esc(a.date)}</div>` : ''}<div>${esc(a.text)}</div></div>`).join('');
 
-  // catalog
-  document.getElementById('catalog').innerHTML = data.treatments.map(tr => `
+  document.getElementById('catalog').innerHTML = (data.treatments || []).map(tr => `
     <div class="card overflow-hidden flex flex-col">
       <div class="h-40 bg-teal-50">${tr.image ? `<img class="photo" src="${esc(tr.image)}" alt="">` : ''}</div>
       <div class="p-4 flex flex-col flex-1">
@@ -346,36 +334,33 @@ function renderPortal() {
       </div>
     </div>`).join('');
 
-  // treatment select
   const sel = document.getElementById('bookTreatment');
-  sel.innerHTML = data.treatments.map(tr => `<option>${esc(tr.name)}</option>`).join('') + `<option>${t('other')}</option>`;
+  const prev = sel.value;
+  sel.innerHTML = (data.treatments || []).map(tr => `<option>${esc(tr.name)}</option>`).join('') + `<option>${t('other')}</option>`;
+  if (prev) sel.value = prev;
 
-  // doctor
   document.getElementById('d-name').textContent = d.name;
   document.getElementById('d-quals').textContent = d.quals;
-  document.getElementById('d-spec').textContent = d.spec ? (lang==='ur'?'خصوصیت: ':'Specialization: ') + d.spec : '';
-  document.getElementById('d-exp').textContent = d.exp ? (lang==='ur'?'تجربہ: ':'Experience: ') + d.exp : '';
+  document.getElementById('d-spec').textContent = d.spec ? (lang === 'ur' ? 'خصوصیت: ' : 'Specialization: ') + d.spec : '';
+  document.getElementById('d-exp').textContent = d.exp ? (lang === 'ur' ? 'تجربہ: ' : 'Experience: ') + d.exp : '';
   document.getElementById('d-intro').textContent = d.intro;
   const dp = document.getElementById('d-photo');
   if (d.photo) { dp.src = d.photo; dp.classList.remove('hidden'); } else dp.classList.add('hidden');
   document.getElementById('d-gallery').innerHTML = (d.gallery || []).map(g => `<div class="h-24 rounded overflow-hidden"><img class="photo" src="${esc(g)}" alt=""></div>`).join('');
 
-  // clinic
   document.getElementById('c-address').textContent = c.address;
-  const ph = document.getElementById('c-phone'); ph.textContent = c.phone; ph.href = 'tel:' + c.phone.replace(/\s/g,'');
+  const ph = document.getElementById('c-phone'); ph.textContent = c.phone; ph.href = 'tel:' + c.phone.replace(/\s/g, '');
   document.getElementById('c-map').href = c.mapLink;
   document.getElementById('c-hours').innerHTML = c.hours.map(h => `
     <div class="flex justify-between border-b border-slate-100 py-1"><span>${esc(h.day)}</span>
     <span>${h.closed ? t('closed') : esc(h.open) + ' – ' + esc(h.close)}</span></div>`).join('');
 
-  // socials
-  const s = data.socials;
-  const icons = [['facebook','Facebook'],['instagram','Instagram'],['youtube','YouTube'],['tiktok','TikTok'],['website','Website'],['other','Link']];
+  const s = data.socials || {};
+  const icons = [['facebook', 'Facebook'], ['instagram', 'Instagram'], ['youtube', 'YouTube'], ['tiktok', 'TikTok'], ['website', 'Website'], ['other', 'Link']];
   document.getElementById('socials').innerHTML = icons.filter(([k]) => s[k])
-    .map(([k,n]) => `<a class="btn btn-ghost text-sm" href="${esc(s[k])}" target="_blank" rel="noopener">${n}</a>`).join('');
+    .map(([k, n]) => `<a class="btn btn-ghost text-sm" href="${esc(s[k])}" target="_blank" rel="noopener">${n}</a>`).join('');
   document.getElementById('f-clinic').textContent = '© ' + new Date().getFullYear() + ' ' + c.name;
 
-  // QR
   renderQR();
 }
 
@@ -387,40 +372,40 @@ function goBook(treatment) {
   document.getElementById('book').scrollIntoView({ behavior: 'smooth' });
 }
 
-/* ==================== BOOKING ==================== */
+/* ==================== BOOKING (anyone can send; only doctor can read) ==================== */
 function submitBooking(e) {
   e.preventDefault();
   const f = e.target;
-  const v = { name: f.name.value.trim(), phone: f.phone.value.trim(), date: f.date.value, time: f.time.value, treatment: f.treatment.value, msg: f.msg.value.trim() };
-  const rec = Object.assign({ id: Date.now(), status: 'requested', created: new Date().toISOString() }, v);
-  data.appointments.push(rec); saveData('Request saved');
-  const text =
-`Appointment Request
+  const rec = {
+    name: f.name.value.trim(), phone: f.phone.value.trim(), date: f.date.value, time: f.time.value,
+    treatment: f.treatment.value, msg: f.msg.value.trim(), status: 'requested', created: new Date().toISOString()
+  };
+  if (db) db.ref('appointments').push(rec).catch(() => {});
+  document.getElementById('bookConfirm').classList.remove('hidden');
+  const text = `Appointment Request
 Clinic: ${data.clinic.name}
-Name: ${v.name}
-Mobile: ${v.phone}
-Preferred date: ${v.date}
-Preferred time: ${v.time}
-Treatment/Consultation: ${v.treatment}
-Message: ${v.msg || '-'}
+Name: ${rec.name}
+Mobile: ${rec.phone}
+Preferred date: ${rec.date}
+Preferred time: ${rec.time}
+Treatment/Consultation: ${rec.treatment}
+Message: ${rec.msg || '-'}
 
 Please confirm my appointment. Thank you.`;
-  document.getElementById('bookConfirm').classList.remove('hidden');
   window.open(waLink(text), '_blank', 'noopener');
   f.reset();
 }
 
 /* ==================== QR ==================== */
-let qrObj = null;
 function renderQR() {
   const box = document.getElementById('qrBox');
   box.innerHTML = '';
   document.getElementById('qrName').textContent = data.clinic.name;
-  if (typeof QRCode === 'undefined') { box.textContent = 'QR library unavailable offline'; return; }
+  if (typeof QRCode === 'undefined') { box.textContent = 'QR unavailable offline'; return; }
   new QRCode(box, { text: siteUrl(), width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
 }
 function qrDataUrl() {
-  const img = document.querySelector('#qrBox img'); const cvs = document.querySelector('#qrBox canvas');
+  const img = document.querySelector('#qrBox img'), cvs = document.querySelector('#qrBox canvas');
   if (cvs) return cvs.toDataURL('image/png');
   return img ? img.src : null;
 }
@@ -435,44 +420,54 @@ function printQR() {
   w.document.close();
 }
 
-/* ==================== VIEW SWITCH ==================== */
+/* ==================== VIEWS & LOGIN ==================== */
 function showPortal() {
   document.getElementById('portal').classList.remove('hidden-view');
   document.getElementById('admin').classList.add('hidden-view');
   document.getElementById('adminLogin').classList.add('hidden-view');
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
 }
 function showAdminLogin() {
+  if (isDoctor()) return showAdmin(adminSection);
   document.getElementById('portal').classList.add('hidden-view');
   document.getElementById('admin').classList.add('hidden-view');
   document.getElementById('adminLogin').classList.remove('hidden-view');
-  document.getElementById('pinInput').value = '';
+  document.getElementById('a_pw').value = '';
 }
-function adminLogin() {
-  if (document.getElementById('pinInput').value === data.pin) {
-    adminAuthed = true; showAdmin('clinic');
-  } else toast('Wrong PIN');
+async function adminLogin() {
+  if (!CONFIGURED) return toast('Firebase not set up yet.');
+  try {
+    await auth.signInWithEmailAndPassword(v('a_email'), document.getElementById('a_pw').value);
+    showAdmin('clinic');
+  } catch (e) {
+    toast('Login failed. Check email and password.');
+  }
 }
-function adminLogout() { adminAuthed = false; showPortal(); }
+function adminLogout() {
+  if (auth) auth.signOut();
+  if (apptRef) { apptRef.off(); apptRef = null; }
+  data.appointments = [];
+  showPortal();
+}
 
 /* ==================== ADMIN ==================== */
 const SECTIONS = [
-  ['clinic','Clinic Profile'],['doctor','Doctor Info'],['welcome','Welcome & Photos'],
-  ['treatments','Treatment Catalog'],['appointments','Appointment Requests'],['hours','Opening Hours'],
-  ['contact','Contact & WhatsApp'],['announcements','Announcements'],['socials','Social Media'],
-  ['language','Language'],['qr','QR Code'],['security','Security & Backup']
+  ['clinic', 'Clinic Profile'], ['doctor', 'Doctor Info'], ['welcome', 'Welcome & Photos'],
+  ['treatments', 'Treatment Catalog'], ['appointments', 'Appointment Requests'], ['hours', 'Opening Hours'],
+  ['contact', 'Contact & WhatsApp'], ['announcements', 'Announcements'], ['socials', 'Social Media'],
+  ['language', 'Language'], ['qr', 'QR Code'], ['security', 'Security & Backup']
 ];
 function showAdmin(section) {
-  if (!adminAuthed) return showAdminLogin();
+  if (!isDoctor()) return showAdminLogin();
+  adminSection = section;
   document.getElementById('portal').classList.add('hidden-view');
   document.getElementById('adminLogin').classList.add('hidden-view');
   document.getElementById('admin').classList.remove('hidden-view');
-  document.getElementById('adminNav').innerHTML = SECTIONS.map(([k,n]) =>
-    `<button class="btn ${k===section?'btn-primary':'btn-ghost'} text-sm text-left whitespace-nowrap" onclick="showAdmin('${k}')">${n}</button>`).join('');
+  document.getElementById('adminNav').innerHTML = SECTIONS.map(([k, n]) =>
+    `<button class="btn ${k === section ? 'btn-primary' : 'btn-ghost'} text-sm text-left whitespace-nowrap" onclick="showAdmin('${k}')">${n}</button>`).join('');
   renderSection(section);
 }
-
-function field(label, id, val, type='text') {
+function field(label, id, val, type = 'text') {
   return `<div class="field"><label>${label}</label><input id="${id}" type="${type}" value="${esc(val)}"></div>`;
 }
 function area(label, id, val) {
@@ -482,7 +477,6 @@ function bar(saveFn, cancelSection) {
   return `<div class="flex gap-2 pt-2"><button class="btn btn-primary" onclick="${saveFn}">Save</button>
           <button class="btn btn-ghost" onclick="showAdmin('${cancelSection}')">Cancel</button></div>`;
 }
-function v(id) { return document.getElementById(id).value.trim(); }
 function panel(title, html) { return `<div class="card p-5"><h2 class="text-lg font-bold mb-3">${title}</h2>${html}</div>`; }
 
 function renderSection(s) {
@@ -490,25 +484,25 @@ function renderSection(s) {
   const c = data.clinic, d = data.doctor, w = data.welcome;
   const map = {
     clinic: () => panel('Clinic Profile',
-      field('Clinic name','c_name',c.name) +
-      field('Logo image URL (or leave blank)','c_logo',c.logo) +
-      field('Website address (paste after you publish)','c_site',c.siteUrl) +
-      bar('saveClinic()','clinic')),
+      field('Clinic name', 'c_name', c.name) +
+      field('Logo image URL (or leave blank)', 'c_logo', c.logo) +
+      field('Website address (paste after you publish)', 'c_site', c.siteUrl) +
+      bar('saveClinic()', 'clinic')),
     doctor: () => panel('Doctor Information',
-      field('Doctor name','d_name',d.name) + field('Qualifications','d_quals',d.quals) +
-      field('Specialization','d_spec',d.spec) + field('Experience','d_exp',d.exp) +
-      field('Profile photo URL','d_photo',d.photo) + area('Introduction','d_intro',d.intro) +
-      area('Clinic photo URLs (one per line)','d_gallery',(d.gallery||[]).join('\n')) +
-      bar('saveDoctor()','doctor')),
+      field('Doctor name', 'd_name', d.name) + field('Qualifications', 'd_quals', d.quals) +
+      field('Specialization', 'd_spec', d.spec) + field('Experience', 'd_exp', d.exp) +
+      field('Profile photo URL', 'd_photo', d.photo) + area('Introduction', 'd_intro', d.intro) +
+      area('Clinic photo URLs (one per line)', 'd_gallery', (d.gallery || []).join('\n')) +
+      bar('saveDoctor()', 'doctor')),
     welcome: () => panel('Welcome & Photos',
-      field('Welcome title','w_title',w.title) + area('Welcome text','w_intro',w.intro) +
-      field('Clinic photo URL','w_photo',w.photo) + bar('saveWelcome()','welcome')),
+      field('Welcome title', 'w_title', w.title) + area('Welcome text', 'w_intro', w.intro) +
+      field('Clinic photo URL', 'w_photo', w.photo) + bar('saveWelcome()', 'welcome')),
     treatments: () => panel('Treatment Catalog',
-      `<div class="space-y-3">${data.treatments.map((tr,i)=>`
+      `<div class="space-y-3">${data.treatments.map((tr, i) => `
         <div class="border rounded-lg p-3">
-          ${field('Name','tn'+i,tr.name)}${field('Short description','td'+i,tr.desc)}
-          ${area('Detailed information','tdt'+i,tr.detail)}${field('Fee (optional)','tf'+i,tr.fee)}
-          ${field('Image URL','ti'+i,tr.image)}
+          ${field('Name', 'tn' + i, tr.name)}${field('Short description', 'td' + i, tr.desc)}
+          ${area('Detailed information', 'tdt' + i, tr.detail)}${field('Fee (optional)', 'tf' + i, tr.fee)}
+          ${field('Image URL', 'ti' + i, tr.image)}
           <button class="btn btn-danger text-sm" onclick="deleteTreatment(${i})">Delete</button>
         </div>`).join('')}</div>
        <div class="flex gap-2 mt-3 flex-wrap">
@@ -516,32 +510,35 @@ function renderSection(s) {
          <button class="btn btn-primary" onclick="saveTreatments()">Save</button>
          <button class="btn btn-ghost" onclick="showAdmin('treatments')">Cancel</button>
        </div>`),
-    appointments: () => panel('Appointment Requests (this device only)',
-      (data.appointments.length ? `<div class="space-y-2">${data.appointments.slice().reverse().map(a=>`
-        <div class="border rounded p-3 text-sm"><b>${esc(a.name)}</b> — ${esc(a.phone)}<br>
-        ${esc(a.date)} ${esc(a.time)} · ${esc(a.treatment)}<br>${esc(a.msg)}
-        <div class="mt-2 flex gap-2 flex-wrap">
-          <a class="btn btn-wa text-sm" target="_blank" href="${waLink('Dear '+a.name+', your appointment on '+a.date+' at '+a.time+' is CONFIRMED. - '+data.clinic.name)}">Confirm on WhatsApp</a>
-          <a class="btn btn-ghost text-sm" target="_blank" href="${waLink('Dear '+a.name+', unfortunately the requested time is not available. Please suggest another time. - '+data.clinic.name)}">Reschedule</a>
-          <button class="btn btn-danger text-sm" onclick="deleteAppt(${a.id})">Delete</button>
-        </div></div>`).join('')}</div>` : '<p class="text-sm text-slate-500">No requests yet.</p>') +
-      `<p class="text-xs text-slate-500 mt-3">Requests are stored in this browser. Requests sent via WhatsApp arrive in your WhatsApp chat.</p>`),
+    appointments: () => {
+      const list = data.appointments || [];
+      return panel('Appointment Requests',
+        (list.length ? `<div class="space-y-2">${list.slice().reverse().map(a => `
+          <div class="border rounded p-3 text-sm"><b>${esc(a.name)}</b> — ${esc(a.phone)}<br>
+          ${esc(a.date)} ${esc(a.time)} · ${esc(a.treatment)}<br>${esc(a.msg)}
+          <div class="mt-2 flex gap-2 flex-wrap">
+            <a class="btn btn-wa text-sm" target="_blank" href="${waLink('Dear ' + a.name + ', your appointment on ' + a.date + ' at ' + a.time + ' is CONFIRMED. - ' + data.clinic.name)}">Confirm on WhatsApp</a>
+            <a class="btn btn-ghost text-sm" target="_blank" href="${waLink('Dear ' + a.name + ', the requested time is not available. Please suggest another time. - ' + data.clinic.name)}">Reschedule</a>
+            <button class="btn btn-danger text-sm" onclick="deleteAppt('${esc(a.id)}')">Delete</button>
+          </div></div>`).join('')}</div>` : '<p class="text-sm text-slate-500">No requests yet.</p>') +
+        `<p class="text-xs text-slate-500 mt-3">Requests are private and visible only to you after login.</p>`);
+    },
     hours: () => panel('Opening Hours',
-      `<div class="space-y-2">${c.hours.map((h,i)=>`
+      `<div class="space-y-2">${c.hours.map((h, i) => `
         <div class="grid grid-cols-12 gap-2 items-center text-sm">
           <span class="col-span-3">${h.day}</span>
-          <label class="col-span-3 flex items-center gap-1 !mb-0"><input type="checkbox" id="hc${i}" ${h.closed?'checked':''} class="!w-auto"> Closed</label>
+          <label class="col-span-3 flex items-center gap-1 !mb-0"><input type="checkbox" id="hc${i}" ${h.closed ? 'checked' : ''} class="!w-auto"> Closed</label>
           <input class="col-span-3" id="ho${i}" type="time" value="${h.open}">
           <input class="col-span-3" id="hcl${i}" type="time" value="${h.close}">
-        </div>`).join('')}</div>` + bar('saveHours()','hours')),
+        </div>`).join('')}</div>` + bar('saveHours()', 'hours')),
     contact: () => panel('Contact & WhatsApp',
-      field('Phone (display)','k_phone',c.phone) +
-      field('WhatsApp number (country code, no +, e.g. 923001234567)','k_wa',c.whatsapp) +
-      field('Google Maps link','k_map',c.mapLink) + area('Address','k_addr',c.address) +
-      bar('saveContact()','contact')),
+      field('Phone (display)', 'k_phone', c.phone) +
+      field('WhatsApp number (country code, no +, e.g. 923001234567)', 'k_wa', c.whatsapp) +
+      field('Google Maps link', 'k_map', c.mapLink) + area('Address', 'k_addr', c.address) +
+      bar('saveContact()', 'contact')),
     announcements: () => panel('Announcements',
-      `<div class="space-y-2">${data.announcements.map((a,i)=>`
-        <div class="border rounded p-3">${field('Date (optional)','ad'+i,a.date)}${area('Text','at'+i,a.text)}
+      `<div class="space-y-2">${data.announcements.map((a, i) => `
+        <div class="border rounded p-3">${field('Date (optional)', 'ad' + i, a.date)}${area('Text', 'at' + i, a.text)}
         <button class="btn btn-danger text-sm" onclick="deleteAnn(${i})">Delete</button></div>`).join('')}</div>
        <div class="flex gap-2 mt-3 flex-wrap">
          <button class="btn btn-ghost" onclick="addAnn()">+ Add announcement</button>
@@ -549,115 +546,152 @@ function renderSection(s) {
          <button class="btn btn-ghost" onclick="showAdmin('announcements')">Cancel</button>
        </div>`),
     socials: () => panel('Social Media Links',
-      field('Facebook','s_facebook',data.socials.facebook) + field('Instagram','s_instagram',data.socials.instagram) +
-      field('YouTube','s_youtube',data.socials.youtube) + field('TikTok','s_tiktok',data.socials.tiktok) +
-      field('Website','s_website',data.socials.website) + field('Other link','s_other',data.socials.other) +
-      bar('saveSocials()','socials')),
+      field('Facebook', 's_facebook', data.socials.facebook) + field('Instagram', 's_instagram', data.socials.instagram) +
+      field('YouTube', 's_youtube', data.socials.youtube) + field('TikTok', 's_tiktok', data.socials.tiktok) +
+      field('Website', 's_website', data.socials.website) + field('Other link', 's_other', data.socials.other) +
+      bar('saveSocials()', 'socials')),
     language: () => panel('Language',
-      `<p class="text-sm mb-2">Patient-facing language is switched by the 'اردو / English' button on the website. Edit text in English and Urdu fields above (clinic name stays the same in both).</p>
+      `<p class="text-sm mb-2">Visitors choose English or اردو with the button on the website. Set which language new visitors see first:</p>
        <div class="flex gap-2"><button class="btn btn-primary" onclick="setDefaultLang('en')">Default: English</button>
        <button class="btn btn-primary" onclick="setDefaultLang('ur')">Default: اردو</button></div>`),
     qr: () => panel('QR Code',
       `<p class="text-sm mb-2">This QR opens: <b>${esc(siteUrl())}</b></p>
-       <p class="text-xs text-slate-500 mb-2">If you change the website address in Clinic Profile, the QR updates automatically.</p>
+       <p class="text-xs text-slate-500 mb-2">Set the Website address in Clinic Profile to keep the QR on your permanent link.</p>
        <div id="adminQr" class="inline-block bg-white p-2"></div>
        <div class="flex gap-2 mt-3"><button class="btn btn-primary" onclick="downloadQR()">Download</button><button class="btn btn-ghost" onclick="printQR()">Print</button></div>`),
     security: () => panel('Security & Backup',
-      field('New PIN (4 or more digits)','p_new','') +
-      `<div class="flex gap-2 mb-6"><button class="btn btn-primary" onclick="savePin()">Change PIN</button></div>
+      field('New password (at least 6 characters)', 'p_new', '', 'password') +
+      `<div class="flex gap-2 mb-6"><button class="btn btn-primary" onclick="savePassword()">Change password</button></div>
        <h3 class="font-bold mb-2">Backup & restore</h3>
-       <p class="text-sm mb-2">Download a backup file regularly and keep it safe. Use Restore to load it again.</p>
+       <p class="text-sm mb-2">Download a backup file regularly. Restore loads a backup into the shared website.</p>
        <div class="flex gap-2 flex-wrap">
          <button class="btn btn-primary" onclick="exportBackup()">Download backup</button>
          <label class="btn btn-ghost">Restore file<input type="file" accept="application/json" class="hidden" onchange="importBackup(event)"></label>
        </div>`)
   };
   body.innerHTML = map[s] ? map[s]() : '';
-  if (s === 'qr') {
-    const q = document.getElementById('adminQr');
-    new QRCode(q, { text: siteUrl(), width: 160, height: 160 });
-  }
+  if (s === 'qr') new QRCode(document.getElementById('adminQr'), { text: siteUrl(), width: 160, height: 160 });
 }
 
 /* ---- save handlers ---- */
 function saveClinic() {
   data.clinic.name = v('c_name') || data.clinic.name;
   data.clinic.logo = v('c_logo'); data.clinic.siteUrl = v('c_site');
-  saveData(); renderPortal(); showAdmin('clinic');
+  saveData(); showAdmin('clinic');
 }
 function saveDoctor() {
   data.doctor.name = v('d_name'); data.doctor.quals = v('d_quals'); data.doctor.spec = v('d_spec');
   data.doctor.exp = v('d_exp'); data.doctor.photo = v('d_photo'); data.doctor.intro = document.getElementById('d_intro').value;
-  data.doctor.gallery = document.getElementById('d_gallery').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  saveData(); renderPortal(); showAdmin('doctor');
+  data.doctor.gallery = document.getElementById('d_gallery').value.split('\n').map(s => s.trim()).filter(Boolean);
+  saveData(); showAdmin('doctor');
 }
 function saveWelcome() {
   data.welcome.title = v('w_title'); data.welcome.intro = document.getElementById('w_intro').value;
-  data.welcome.photo = v('w_photo'); saveData(); renderPortal(); showAdmin('welcome');
+  data.welcome.photo = v('w_photo'); saveData(); showAdmin('welcome');
 }
 function addTreatment() {
-  data.treatments.push({ id: 't'+Date.now(), name: 'New treatment', desc: '', detail: '', fee: '', image: '' });
+  data.treatments.push({ id: 't' + Date.now(), name: 'New treatment', desc: '', detail: '', fee: '', image: '' });
   saveData('Added'); renderSection('treatments');
 }
 function saveTreatments() {
-  data.treatments.forEach((tr,i) => {
-    tr.name = v('tn'+i); tr.desc = v('td'+i); tr.detail = document.getElementById('tdt'+i).value;
-    tr.fee = v('tf'+i); tr.image = v('ti'+i);
+  data.treatments.forEach((tr, i) => {
+    tr.name = v('tn' + i); tr.desc = v('td' + i); tr.detail = document.getElementById('tdt' + i).value;
+    tr.fee = v('tf' + i); tr.image = v('ti' + i);
   });
-  saveData(); renderPortal(); showAdmin('treatments');
+  saveData(); showAdmin('treatments');
 }
 function deleteTreatment(i) {
   if (!confirm('Delete this treatment?')) return;
-  data.treatments.splice(i,1); saveData('Deleted'); renderPortal(); renderSection('treatments');
+  data.treatments.splice(i, 1); saveData('Deleted'); renderSection('treatments');
 }
 function deleteAppt(id) {
   if (!confirm('Delete this request?')) return;
-  data.appointments = data.appointments.filter(a => a.id !== id); saveData('Deleted'); renderSection('appointments');
+  if (db) db.ref('appointments/' + id).remove().then(() => toast('Deleted')).catch(() => toast('Not allowed'));
 }
 function saveHours() {
-  data.clinic.hours.forEach((h,i) => {
-    h.closed = document.getElementById('hc'+i).checked;
-    h.open = document.getElementById('ho'+i).value; h.close = document.getElementById('hcl'+i).value;
+  data.clinic.hours.forEach((h, i) => {
+    h.closed = document.getElementById('hc' + i).checked;
+    h.open = document.getElementById('ho' + i).value; h.close = document.getElementById('hcl' + i).value;
   });
-  saveData(); renderPortal(); showAdmin('hours');
+  saveData(); showAdmin('hours');
 }
 function saveContact() {
-  data.clinic.phone = v('k_phone'); data.clinic.whatsapp = v('k_wa').replace(/[^0-9]/g,'');
+  data.clinic.phone = v('k_phone'); data.clinic.whatsapp = v('k_wa').replace(/[^0-9]/g, '');
   data.clinic.mapLink = v('k_map'); data.clinic.address = document.getElementById('k_addr').value;
-  saveData(); renderPortal(); showAdmin('contact');
+  saveData(); showAdmin('contact');
 }
-function addAnn() { data.announcements.push({ id:'a'+Date.now(), date:'', text:'' }); saveData('Added'); renderSection('announcements'); }
-function deleteAnn(i) { data.announcements.splice(i,1); saveData('Deleted'); renderPortal(); renderSection('announcements'); }
+function addAnn() { data.announcements.push({ id: 'a' + Date.now(), date: '', text: '' }); saveData('Added'); renderSection('announcements'); }
+function deleteAnn(i) { data.announcements.splice(i, 1); saveData('Deleted'); renderSection('announcements'); }
 function saveAnn() {
-  data.announcements.forEach((a,i) => { a.date = v('ad'+i); a.text = document.getElementById('at'+i).value; });
-  saveData(); renderPortal(); showAdmin('announcements');
+  data.announcements.forEach((a, i) => { a.date = v('ad' + i); a.text = document.getElementById('at' + i).value; });
+  saveData(); showAdmin('announcements');
 }
 function saveSocials() {
-  ['facebook','instagram','youtube','tiktok','website','other'].forEach(k => data.socials[k] = v('s_'+k));
-  saveData(); renderPortal(); showAdmin('socials');
+  ['facebook', 'instagram', 'youtube', 'tiktok', 'website', 'other'].forEach(k => data.socials[k] = v('s_' + k));
+  saveData(); showAdmin('socials');
 }
-function setDefaultLang(l) { lang = l; data.lang = l; saveData('Default language set'); applyLang(); renderPortal(); }
-function savePin() {
+function setDefaultLang(l) { data.lang = l; saveData('Default language set'); }
+async function savePassword() {
   const p = v('p_new');
-  if (p.length < 4) return toast('PIN must be at least 4 digits');
-  data.pin = p; saveData('PIN changed');
+  if (p.length < 6) return toast('Password must be at least 6 characters');
+  try { await auth.currentUser.updatePassword(p); toast('Password changed'); document.getElementById('p_new').value = ''; }
+  catch (e) { toast('Log out and log in again, then change password'); }
 }
 function exportBackup() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'clinic-backup-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  a.download = 'clinic-backup-' + new Date().toISOString().slice(0, 10) + '.json'; a.click();
 }
 function importBackup(e) {
   const file = e.target.files[0]; if (!file) return;
   const r = new FileReader();
   r.onload = () => {
-    try { data = Object.assign(structuredClone(DEFAULT_DATA), JSON.parse(r.result)); saveData('Restored'); applyLang(); renderPortal(); showAdmin('security'); }
-    catch (err) { toast('Invalid backup file'); }
+    try {
+      const incoming = JSON.parse(r.result);
+      data = Object.assign(structuredClone(DEFAULT_DATA), incoming);
+      data.appointments = [];
+      saveData('Restored'); showAdmin('security');
+    } catch (err) { toast('Invalid backup file'); }
   };
   r.readAsText(file);
 }
 
-/* ==================== INIT ==================== */
+/* ==================== LIVE SYNC ==================== */
+function startSync() {
+  // Public content: everyone reads, only doctor writes.
+  db.ref('site').on('value', snap => {
+    const val = snap.val() || {};
+    data = Object.assign(structuredClone(DEFAULT_DATA), val);
+    data.appointments = [];
+    if (!localStorage.getItem('lang')) lang = data.lang || 'en';
+    applyLang(); renderPortal();
+    if (isDoctor() && document.getElementById('admin').classList.contains('hidden-view') === false && adminSection === 'appointments') {
+      renderSection('appointments');
+    }
+  });
+  document.getElementById('setupBanner').classList.add('hidden');
+}
+
+function watchAppointments() {
+  if (apptRef) return;
+  apptRef = db.ref('appointments');
+  apptRef.on('value', snap => {
+    const val = snap.val() || {};
+    data.appointments = Object.entries(val).map(([id, a]) => Object.assign({ id }, a));
+    if (adminSection === 'appointments' && isDoctor()) renderSection('appointments');
+  }, () => toast('Could not load requests'));
+}
+
+if (CONFIGURED) {
+  auth.onAuthStateChanged(user => {
+    if (user) watchAppointments();
+    else if (apptRef) { apptRef.off(); apptRef = null; data.appointments = []; }
+  });
+  startSync();
+} else {
+  document.getElementById('setupBanner').classList.remove('hidden');
+}
+
 applyLang();
 renderPortal();
 showPortal();
