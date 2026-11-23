@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Life Care Homeopathic Hospital Mingora | Dr. Iftikhar Ahmad</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d9488">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Life Care Clinic">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="description" content="Life Care Homeopathic Hospital, Mingora. Dr. Iftikhar Ahmad (D.H.M.S, R.H.M.P.) offers homeopathic treatment for infertility, PCOS, anxiety, diabetes and more. Book an appointment on WhatsApp.">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -49,6 +54,7 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <button id="installBtn" class="btn btn-primary text-sm hidden" onclick="installApp()">📲 Install App</button>
         <button id="langBtn" class="btn btn-ghost text-sm" onclick="toggleLang()">اردو</button>
         <a id="h-wa" class="btn btn-wa text-sm" target="_blank" rel="noopener">WhatsApp</a>
         <button class="btn btn-ghost text-sm" onclick="showAdminLogin()" title="Doctor login">⚙</button>
@@ -691,6 +697,47 @@ if (CONFIGURED) {
   startSync();
 } else {
   document.getElementById('setupBanner').classList.remove('hidden');
+}
+
+/* ==================== INSTALL AS APP ==================== */
+let deferredInstall = null;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+// Android / Chrome / Edge: browser offers install, we show our button
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstall = e;
+  if (!isStandalone) document.getElementById('installBtn').classList.remove('hidden');
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstall = null;
+  document.getElementById('installBtn').classList.add('hidden');
+  toast('App installed on your home screen');
+});
+
+async function installApp() {
+  if (deferredInstall) {
+    deferredInstall.prompt();
+    await deferredInstall.userChoice;
+    deferredInstall = null;
+    document.getElementById('installBtn').classList.add('hidden');
+    return;
+  }
+  // iPhone / iPad: browsers do not allow an install button, so show the steps
+  if (isIOS) {
+    alert('To install on iPhone:\n\n1. Tap the Share button (square with arrow) at the bottom of Safari.\n2. Scroll down and tap "Add to Home Screen".\n3. Tap "Add".');
+  } else {
+    alert('To install: open the browser menu (⋮ or the install icon in the address bar) and choose "Install app" or "Add to Home screen".');
+  }
+}
+
+// iPhone: no install event exists, so show the button with steps
+if (isIOS && !isStandalone) document.getElementById('installBtn').classList.remove('hidden');
+
+// Register the service worker (required for installing). Failure is harmless.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
 applyLang();
